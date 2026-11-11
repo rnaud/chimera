@@ -116,6 +116,7 @@ const SCENES: SceneDef[] = [
       // the dare: lower again, slow, every word leaned on
       { who: 0, text: "Then say what again.", pause: 0.5, shot: "looming", f0: 150, rate: 0.82, pressure: 12, tension: 0.7, accent: 0.3, rough: 0.2 },
       { who: 0, text: "I dare you.", pause: 0.35, shot: "looming", f0: 138, rate: 0.72, pressure: 11, tension: 0.7, accent: 0.3, rough: 0.2 },
+      { who: 0, text: "I double dare you.", pause: 0.25, shot: "looming", f0: 158, rate: 0.76, pressure: 13, tension: 0.74, accent: 0.32, rough: 0.24 },
       { who: 2, text: "What?", pause: 0.9, shot: "chair", f0: 180, rate: 0.9, pressure: 5, breath: 0.6, bang: { voice: 0, after: 0.2 } },
       // the verse
       { who: 0, text: "Do you know the Bible, Brett?", pause: 1.6, shot: "looming" },
@@ -130,7 +131,7 @@ const SCENES: SceneDef[] = [
     aim: [
       // his pistol comes up as he shouts, and stays up; the other's on the verse's third phrase
       { voice: 0, line: 6, late: 0.3 },
-      { voice: 1, line: 17, late: 0.7 },
+      { voice: 1, line: 18, late: 0.7 },
     ],
     shots: { after: 0.12, by: [[0, 0], [1, 0.1], [0, 0.14], [1, 0.12], [0, 0.15], [0, 0.13], [1, 0.16], [0, 0.2], [1, 0.3]] },
     outro: 3.2,
