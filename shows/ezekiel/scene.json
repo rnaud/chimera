@@ -1,0 +1,214 @@
+{
+  "title": "Ezekiel 25:17",
+  "set": "apartment",
+  "audio": "mix.wav",
+  "voices": [
+    {
+      "name": "Jules",
+      "tele": "jules.tele"
+    },
+    {
+      "name": "Vincent",
+      "tele": "vincent.tele"
+    },
+    {
+      "name": "Brett",
+      "tele": "brett.tele"
+    }
+  ],
+  "cues": [
+    {
+      "voice": 0,
+      "text": "Describe Marsellus Wallace for me.",
+      "shot": "looming",
+      "start": 3.058,
+      "end": 5.471
+    },
+    {
+      "voice": 2,
+      "text": "What?",
+      "shot": "chair",
+      "start": 5.97,
+      "end": 6.32
+    },
+    {
+      "voice": 0,
+      "text": "Which country are you from?",
+      "shot": "looming",
+      "start": 6.674,
+      "end": 8.031
+    },
+    {
+      "voice": 2,
+      "text": "What?",
+      "shot": "chair",
+      "start": 8.386,
+      "end": 8.709
+    },
+    {
+      "voice": 0,
+      "text": "I never heard of a country called What. Do they speak English there?",
+      "shot": "looming",
+      "start": 8.978,
+      "end": 12.758
+    },
+    {
+      "voice": 2,
+      "text": "What?",
+      "shot": "chair",
+      "start": 13.026,
+      "end": 13.338
+    },
+    {
+      "voice": 0,
+      "text": "English! Do you speak it?",
+      "shot": "looming",
+      "start": 13.538,
+      "end": 15.489
+    },
+    {
+      "voice": 2,
+      "text": "Yes.",
+      "shot": "chair",
+      "start": 15.842,
+      "end": 16.229
+    },
+    {
+      "voice": 0,
+      "text": "Then say what again.",
+      "shot": "looming",
+      "start": 16.786,
+      "end": 18.012
+    },
+    {
+      "voice": 0,
+      "text": "I dare you.",
+      "shot": "looming",
+      "start": 18.418,
+      "end": 19.417
+    },
+    {
+      "voice": 0,
+      "text": "I double dare you.",
+      "shot": "looming",
+      "start": 19.714,
+      "end": 21.147
+    },
+    {
+      "voice": 2,
+      "text": "What?",
+      "shot": "chair",
+      "start": 22.098,
+      "end": 22.48
+    },
+    {
+      "voice": 0,
+      "text": "Do you know the Bible, Brett?",
+      "shot": "looming",
+      "start": 24.322,
+      "end": 26.344
+    },
+    {
+      "voice": 2,
+      "text": "Yes!",
+      "shot": "chair",
+      "start": 26.898,
+      "end": 27.285
+    },
+    {
+      "voice": 0,
+      "text": "There is one verse I know by heart.",
+      "shot": "room",
+      "start": 28.242,
+      "end": 30.496
+    },
+    {
+      "voice": 0,
+      "text": "Ezekiel twenty five, seventeen.",
+      "shot": "room",
+      "start": 31.09,
+      "end": 33.923
+    },
+    {
+      "voice": 0,
+      "text": "And I will execute great vengeance upon them,",
+      "shot": "looming",
+      "start": 35.17,
+      "end": 38.162
+    },
+    {
+      "voice": 0,
+      "text": "with furious rebukes.",
+      "shot": "looming",
+      "start": 38.514,
+      "end": 40.253
+    },
+    {
+      "voice": 0,
+      "text": "And they shall know that I am the Lord,",
+      "shot": "barrels",
+      "start": 40.85,
+      "end": 43.09
+    },
+    {
+      "voice": 0,
+      "text": "when I shall lay my vengeance upon them!",
+      "shot": "barrels",
+      "start": 43.794,
+      "end": 46.575
+    }
+  ],
+  "aim": [
+    {
+      "voice": 0,
+      "t": 13.788
+    },
+    {
+      "voice": 1,
+      "t": 41.5
+    }
+  ],
+  "shots": [
+    {
+      "voice": 0,
+      "t": 22.68,
+      "wound": true
+    },
+    {
+      "voice": 0,
+      "t": 46.695
+    },
+    {
+      "voice": 1,
+      "t": 46.795
+    },
+    {
+      "voice": 0,
+      "t": 46.935
+    },
+    {
+      "voice": 1,
+      "t": 47.055
+    },
+    {
+      "voice": 0,
+      "t": 47.205
+    },
+    {
+      "voice": 0,
+      "t": 47.335
+    },
+    {
+      "voice": 1,
+      "t": 47.495
+    },
+    {
+      "voice": 0,
+      "t": 47.695
+    },
+    {
+      "voice": 1,
+      "t": 47.995
+    }
+  ]
+}

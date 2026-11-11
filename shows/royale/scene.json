@@ -1,0 +1,59 @@
+{
+  "title": "Royale with cheese",
+  "set": "car",
+  "audio": "mix.wav",
+  "voices": [
+    {
+      "name": "Vincent",
+      "tele": "vincent.tele"
+    },
+    {
+      "name": "Jules",
+      "tele": "jules.tele"
+    }
+  ],
+  "cues": [
+    {
+      "voice": 0,
+      "text": "You know what they call a quarter pounder with cheese in Paris?",
+      "shot": "two",
+      "start": 3.25,
+      "end": 6.671
+    },
+    {
+      "voice": 1,
+      "text": "They don't call it a quarter pounder with cheese?",
+      "shot": "driver",
+      "start": 6.946,
+      "end": 9.291
+    },
+    {
+      "voice": 0,
+      "text": "No man. They got the metric system.",
+      "shot": "passenger",
+      "start": 9.522,
+      "end": 12.006
+    },
+    {
+      "voice": 1,
+      "text": "Then what do they call it?",
+      "shot": "low",
+      "start": 12.354,
+      "end": 13.589
+    },
+    {
+      "voice": 0,
+      "text": "They call it a Royale with cheese.",
+      "shot": "passenger",
+      "start": 14.082,
+      "end": 16.106
+    },
+    {
+      "voice": 1,
+      "text": "Royale with cheese.",
+      "shot": "driver",
+      "start": 16.914,
+      "end": 18.255
+    }
+  ]
+}
