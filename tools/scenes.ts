@@ -49,6 +49,8 @@ interface Line extends Delivery {
   pause: number;
   /** the camera set-up it is filmed in (ScenePage.tsx); the same as the line before: no cut */
   shot: string;
+  /** a gunman answers the line with one shot that wounds, this long after its last word (s) */
+  bang?: { voice: number; after: number };
 }
 interface SceneDef {
   id: string;
@@ -99,10 +101,25 @@ const SCENES: SceneDef[] = [
       { name: "Vincent", f0: 108, pan: 0.55 },
       { name: "Brett", f0: 168, pan: -0.5, breath: 0.45, pressure: 6, tension: 0.4 },
     ],
-    // the verse is Ezekiel 25:17 as the King James Bible has it
+    // The questions and the dare are condensed and mostly reworded; the verse is Ezekiel 25:17 as
+    // the King James Bible has it.
     lines: [
-      { who: 0, text: "Do you know the Bible, Brett?", pause: 3.0, shot: "looming" },
-      { who: 2, text: "Yes.", pause: 0.7, shot: "chair" },
+      // the questions: he gets louder and higher, the answers more frightened
+      { who: 0, text: "Describe Marsellus Wallace for me.", pause: 3.0, shot: "looming", f0: 118 },
+      { who: 2, text: "What?", pause: 0.45, shot: "chair", f0: 172 },
+      { who: 0, text: "Which country are you from?", pause: 0.3, shot: "looming", f0: 132, rate: 1.0, pressure: 9.5, tension: 0.58, accent: 0.2 },
+      { who: 2, text: "What?", pause: 0.3, shot: "chair", f0: 186, rate: 1.1 },
+      { who: 0, text: "I never heard of a country called What. Do they speak English there?", pause: 0.22, shot: "looming", f0: 150, rate: 1.04, pressure: 11, tension: 0.64, accent: 0.24, rough: 0.14 },
+      { who: 2, text: "What?", pause: 0.22, shot: "chair", f0: 202, rate: 1.15, pressure: 7 },
+      { who: 0, text: "English! Do you speak it?", pause: 0.15, shot: "looming", f0: 205, rate: 0.95, pressure: 15, tension: 0.76, accent: 0.28, rough: 0.26 },
+      { who: 2, text: "Yes.", pause: 0.3, shot: "chair", f0: 196, rate: 1.1 },
+      // the dare: lower again, slow, every word leaned on
+      { who: 0, text: "Then say what again.", pause: 0.5, shot: "looming", f0: 150, rate: 0.82, pressure: 12, tension: 0.7, accent: 0.3, rough: 0.2 },
+      { who: 0, text: "I dare you.", pause: 0.35, shot: "looming", f0: 138, rate: 0.72, pressure: 11, tension: 0.7, accent: 0.3, rough: 0.2 },
+      { who: 2, text: "What?", pause: 0.9, shot: "chair", f0: 180, rate: 0.9, pressure: 5, breath: 0.6, bang: { voice: 0, after: 0.2 } },
+      // the verse
+      { who: 0, text: "Do you know the Bible, Brett?", pause: 1.6, shot: "looming" },
+      { who: 2, text: "Yes!", pause: 0.5, shot: "chair", f0: 214, pressure: 9, tension: 0.6, rate: 1.1 },
       { who: 0, text: "There is one verse I know by heart.", pause: 0.9, shot: "room", f0: 108, rate: 0.9 },
       { who: 0, text: "Ezekiel twenty five, seventeen.", pause: 0.55, shot: "room", f0: 116, rate: 0.84, accent: 0.2 },
       { who: 0, text: "And I will execute great vengeance upon them,", pause: 1.2, shot: "looming", f0: 138, rate: 0.88, accent: 0.2, pressure: 10, tension: 0.6 },
@@ -111,8 +128,9 @@ const SCENES: SceneDef[] = [
       { who: 0, text: "when I shall lay my vengeance upon them!", pause: 0.65, shot: "barrels", f0: 226, rate: 0.78, accent: 0.3, pressure: 16, tension: 0.78, rough: 0.28 },
     ],
     aim: [
-      { voice: 0, line: 6, late: 0.1 },
-      { voice: 1, line: 6, late: 0.7 },
+      // his pistol comes up as he shouts, and stays up; the other's on the verse's third phrase
+      { voice: 0, line: 6, late: 0.3 },
+      { voice: 1, line: 17, late: 0.7 },
     ],
     shots: { after: 0.12, by: [[0, 0], [1, 0.1], [0, 0.14], [1, 0.12], [0, 0.15], [0, 0.13], [1, 0.16], [0, 0.2], [1, 0.3]] },
     outro: 3.2,
@@ -160,8 +178,10 @@ function build(def: SceneDef): void {
   const takes: Take[] = [];
   let sr = 0, hop = 0, frameLen = 0;
   let at = 0;
+  /** `wound`: one shot in answer to a line; the rest are the volley that ends the scene */
+  const shots: { voice: number; t: number; wound?: boolean }[] = [];
   for (const [i, line] of def.lines.entries()) {
-    const { who, text, pause, shot, ...delivery } = line;
+    const { who, text, pause, shot, bang: _bang, ...delivery } = line;
     const { wav, tele } = say(join(tmp, `line${i}`), text, who, delivery);
     sr = wav.sampleRate;
     hop = tele.readUInt32LE(12);
@@ -170,11 +190,14 @@ function build(def: SceneDef): void {
     const start = Math.round(((at + pause) * sr) / hop) * hop;
     takes.push({ who, text, shot, wav: wav.channels[0], tele, start });
     at = start / sr + wav.channels[0].length / sr - TAIL;
+    if (line.bang) {
+      at += line.bang.after;
+      shots.push({ voice: line.bang.voice, t: +at.toFixed(3), wound: true });
+    }
     let sq = 0;
     for (const v of wav.channels[0]) sq += v * v;
     console.log(`${(start / sr).toFixed(2).padStart(6)} s  ${(wav.channels[0].length / sr - TAIL - LEAD).toFixed(2)} s long  ${(10 * Math.log10(sq / wav.channels[0].length)).toFixed(0)} dB  ${def.voices[who].name}: ${text}`);
   }
-  const shots: { voice: number; t: number }[] = [];
   if (def.shots) {
     let t = at + def.shots.after;
     for (const [voice, gap] of def.shots.by) {
@@ -183,6 +206,7 @@ function build(def: SceneDef): void {
     }
     at = t + 0.5;
   }
+  shots.sort((a, b) => a.t - b.t);
   const total = Math.ceil(((at + def.outro) * sr) / hop) * hop;
   const frames = total / hop + 1;
 

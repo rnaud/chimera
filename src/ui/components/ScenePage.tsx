@@ -10,10 +10,11 @@
  *   { "title": "…", "set": "car", "audio": "mix.wav",
  *     "voices": [{ "name": "Vincent", "tele": "vincent.tele" }, …],
  *     "cues": [{ "voice": 0, "text": "…", "shot": "two", "start": 3.25, "end": 6.54 }, …],
- *     "aim": [{ "voice": 0, "t": 14.2 }], "shots": [{ "voice": 0, "t": 19.1 }, …] }
+ *     "aim": [{ "voice": 0, "t": 14.2 }], "shots": [{ "voice": 0, "t": 19.1, "wound": true }, …] }
  *
  * The voices take the set's places in order (stage3d.ts `PLACES`). `aim` is when a gunman has
- * his pistol levelled, `shots` when each one fires (the mix has the bangs).
+ * his pistol levelled, `shots` when each one fires (the mix has the bangs): a `wound` makes the man
+ * in the chair flinch, the others kill him.
  * Each head keeps its own three.js scene (its fog dims the far side of that head only); the heads
  * and the set are drawn one after another under one camera, and the beams blend by maximum, so
  * the order doesn't matter.
@@ -44,7 +45,8 @@ interface SceneFile {
   set?: SetName;
   audio: string;
   aim?: { voice: number; t: number }[];
-  shots?: { voice: number; t: number }[];
+  /** `wound`: he flinches and goes on; the others kill */
+  shots?: { voice: number; t: number; wound?: boolean }[];
   voices: { name: string; tele: string }[];
   cues: Cue[];
 }
@@ -357,20 +359,25 @@ function SceneView(props: { scene: SceneFile; tracks: TeleTrack[]; transport: Tr
 
       // ---- the camera: this shot's drift, and a hand holding it
       // ---- the guns: levelled a little before `aim`, a flash and a kick at each shot
-      let fired = 0, bang = 0;
+      let fired = 0, bang = 0, hurt = 0;
       for (let g = 0; g < places.length; g++) {
         const a = aims.find((x) => x.voice === g);
         action.aim[g] = a ? Math.min(1, Math.max(0, (t - a.t + 0.9) / 0.9)) : 0;
         action.flash[g] = 0;
       }
+      let firstFatal = Infinity;
       for (const sh of shots) {
         if (t < sh.t) continue;
-        fired++;
         const f = Math.exp(-(t - sh.t) / 0.07);
         action.flash[sh.voice] = Math.max(action.flash[sh.voice] ?? 0, f);
         bang = Math.max(bang, f);
+        if (sh.wound) hurt = Math.max(hurt, Math.exp(-(t - sh.t) / 0.5));
+        else {
+          fired++;
+          firstFatal = Math.min(firstFatal, sh.t);
+        }
       }
-      action.slump = fired ? Math.min(1, (t - shots[0].t) / 1.6) : 0;
+      action.slump = fired ? Math.min(1, (t - firstFatal) / 1.6) : 0;
 
       const { shot, since } = shotAt(dir, scene.cues, t);
       const u = ease(Math.min(1, Math.max(0, (t - since) / shot.dur)));
@@ -399,6 +406,11 @@ function SceneView(props: { scene: SceneFile; tracks: TeleTrack[]; transport: Tr
           // shot: thrown back at each hit, then slumped over
           want.nod = 0.5 * bang - 0.62 * action.slump * action.slump;
           want.yaw += 0.25 * action.slump;
+        }
+        if (i === victim && !fired && hurt > 0.01) {
+          // winged: he jerks back and round, and comes slowly upright again
+          want.nod += 0.3 * bang - 0.22 * hurt;
+          want.yaw -= 0.35 * hurt;
         }
         hd.yaw = follow(hd.yaw, want.yaw, i === victim && fired ? 0.08 : 0.22, dt);
         hd.nod = follow(hd.nod, want.nod, i === victim && fired ? 0.06 : 0.3, dt);
