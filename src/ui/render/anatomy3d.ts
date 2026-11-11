@@ -632,7 +632,8 @@ const ECHO_AGES = [0.09, 0.06, 0.03];
 
 export class Anatomy3D {
   readonly scene = new THREE.Scene();
-  readonly camera = new THREE.PerspectiveCamera(24, 1, 5, 2000);
+  /** a page that stages several heads under one camera (the scene page) swaps its own in */
+  camera = new THREE.PerspectiveCamera(24, 1, 5, 2000);
   private readonly beams = new Beams();
   private rest: Rest | null = null;
   private w = 1;
@@ -674,6 +675,12 @@ export class Anatomy3D {
 
   dispose(): void {
     this.beams.dispose();
+  }
+
+  /** the head's lines, in the head's own frame: a staged scene parents this to place the head,
+   *  and hangs what the head wears (hair) under it */
+  get root(): THREE.Group {
+    return this.beams.group;
   }
 
   /** forget the motion so far (a replay jumped): the face's springs and held-note time, the
@@ -766,7 +773,8 @@ export class Anatomy3D {
     const C = rest.condyle;
     const B = this.beams;
     // dim with depth: full brightness up to just in front of the head's middle
-    const dist = this.camera.position.distanceTo(rest.center);
+    // (the camera in the head's frame: the head may stand anywhere in a staged scene)
+    const dist = this.eye.distanceTo(rest.center);
     const fog = this.scene.fog as THREE.Fog;
     fog.near = dist - 3 * k;
     fog.far = dist + 30 * k;

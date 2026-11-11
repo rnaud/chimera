@@ -26,6 +26,9 @@ const AnatomyView3D = lazy(() => import("./components/AnatomyView3D.tsx").then((
 // the duet page (`?show=<id>`): two 3D heads replaying a pre-rendered song
 const DuetPage = lazy(() => import("./components/DuetPage.tsx").then((m) => ({ default: m.DuetPage })));
 
+// the scene page (`?scene=<id>`): the heads staged together in one 3D scene, acting a dialogue
+const ScenePage = lazy(() => import("./components/ScenePage.tsx").then((m) => ({ default: m.ScenePage })));
+
 /** the show to play, from `?show=<id>` (a plain folder name under public/shows) */
 function showId(): string | null {
   const id = new URLSearchParams(window.location.search).get("show");
@@ -180,6 +183,15 @@ function PlayRight() {
 }
 
 export function App() {
+  const params = new URLSearchParams(window.location.search);
+  // a build made to show the scenes (VITE_HOME_SCENE=<id>) opens on one; `?synth` is the app itself
+  const scene = params.get("scene") ?? (params.has("synth") || params.has("show") ? null : (import.meta.env.VITE_HOME_SCENE as string | undefined) ?? null);
+  if (scene && /^[\w-]+$/.test(scene))
+    return (
+      <Suspense fallback={null}>
+        <ScenePage id={scene} />
+      </Suspense>
+    );
   const show = showId();
   if (show)
     return (

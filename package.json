@@ -10,6 +10,8 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "bun run wasm && cargo test --workspace && bun test tests",
     "typecheck": "tsc --noEmit",
+    "scenes": "cargo build --release -p chimera-cli && bun tools/scenes.ts",
+    "build:pages": "bun run wasm && bun run scenes && VITE_HOME_SCENE=royale vite build --base=/chimera/",
     "lint:layout": "bun run wasm && bun tools/layout-lint.ts",
     "wasm": "cargo build -p chimera-wasm --release --target wasm32-unknown-unknown && cp target/wasm32-unknown-unknown/release/chimera_wasm.wasm src/wasm/chimera.wasm"
   },
@@ -27,6 +29,6 @@
     "@vitejs/plugin-react": "6.2.1",
     "playwright-core": "1.64.1",
     "typescript": "7.0.2",
-    "vite": "8.3.6"
+    "vite": "8.3.5"
   }
 }

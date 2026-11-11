@@ -143,8 +143,12 @@ pub fn text_f0(body_name: &str) -> f64 {
 /// Say `text` the way `render text` does: CMUdict G2P, the phrase planner from t0 = 50 ms, the
 /// body's speaking f0, 300 ms of tail. `chimera compare tsp` measures exactly these renders.
 pub fn say(g: &EnglishG2P, text: &str, body_name: &str) -> Result<Spoken, String> {
+    say_at(g, text, body_name, text_f0(body_name), false).map(|(s, _)| s)
+}
+
+/// `say` at a chosen speaking f0 (Hz), optionally recording the telemetry (`--tele`).
+fn say_at(g: &EnglishG2P, text: &str, body_name: &str, f0: f64, tele: bool) -> Result<(Spoken, Option<TeleRecorder>), String> {
     let b = body(body_name)?;
-    let f0 = text_f0(body_name);
     let phrases = g.to_phrases(text);
     let shown: Vec<String> = phrases
         .iter()
@@ -183,18 +187,40 @@ pub fn say(g: &EnglishG2P, text: &str, body_name: &str) -> Result<Spoken, String
     voice.schedule(&plan.gestures);
     let total = js_round(FS * (plan.end + 0.3)) as usize;
     let mut out = vec![0f32; total];
-    render_blocks(&mut voice, &mut out);
-    Ok(Spoken { out, plan, shown: shown.join(" | ") })
+    let rec = if tele {
+        render_tracked(&mut voice, &mut out, false, true)?.1
+    } else {
+        render_blocks(&mut voice, &mut out);
+        None
+    };
+    Ok((Spoken { out, plan, shown: shown.join(" | ") }, rec))
 }
 
-/// English text through G2P and the phrase planner. `render text <out> ["Text."] [body]`
+/// English text through G2P and the phrase planner.
+/// `render text <out> ["Text."] [body] [--f0 hz] [--tele voice.tele]`: `--f0` is the speaking
+/// pitch (the body's own by default), `--tele` writes the telemetry over time (see `TeleRecorder`).
 pub fn text(ctx: &Ctx, a: &[String]) -> Result<(), String> {
+    let mut tele_out: Option<String> = None;
+    let mut f0: Option<f64> = None;
+    let mut pos: Vec<String> = Vec::new();
+    let mut it = a.iter();
+    while let Some(x) = it.next() {
+        if x == "--tele" {
+            tele_out = Some(it.next().ok_or("--tele needs a file")?.clone());
+        } else if x == "--f0" {
+            let v = it.next().ok_or("--f0 needs a pitch in Hz")?;
+            f0 = Some(v.parse::<f64>().ok().filter(|h| (40.0..=600.0).contains(h)).ok_or(format!("--f0 {v:?}: want 40 to 600 Hz"))?);
+        } else {
+            pos.push(x.clone());
+        }
+    }
+    let a = &pos[..];
     let name = arg(a, 0, "out/text");
     let text = arg(a, 1, "Hello world.");
     let body_name = arg(a, 2, "male");
     let g = g2p()?;
     let t = Instant::now();
-    let s = say(&g, text, body_name)?;
+    let (s, rec) = say_at(&g, text, body_name, f0.unwrap_or(text_f0(body_name)), tele_out.is_some())?;
     let ms = ms_since(t);
     println!("{}", s.shown);
     let file = wav_name(name);
@@ -204,6 +230,10 @@ pub fn text(ctx: &Ctx, a: &[String]) -> Result<(), String> {
         fixed(s.out.len() as f64 / FS, 2),
         fixed(ms, 0)
     );
+    if let (Some(path), Some(r)) = (&tele_out, rec) {
+        std::fs::write(path, r.bytes(body_mix(body_name)?)).map_err(|e| format!("{path}: {e}"))?;
+        println!("{path}: {} telemetry frames every {TELE_HOP} samples", r.frames);
+    }
     Ok(())
 }
 

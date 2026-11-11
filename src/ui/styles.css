@@ -2624,6 +2624,27 @@ input[type="range"]::-moz-range-thumb {
   color: var(--text-dim);
 }
 
+/* the scene page's links to the other scenes, at the right of its top bar */
+.scene-links {
+  display: flex;
+  gap: 16px;
+  margin-left: auto;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.scene-links a {
+  color: var(--text-dim);
+  text-decoration: none;
+}
+
+.scene-links a:hover,
+.scene-links a[aria-current="page"] {
+  color: var(--amber);
+}
+
 .duet-heads {
   display: grid;
   grid-template-columns: repeat(var(--voices, 2), minmax(0, 1fr));

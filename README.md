@@ -36,6 +36,19 @@ for tests and the `chimera` CLI.
 Male, female and child bodies blend continuously. Everything on screen animates from live
 engine state: pressure in the airway, airflow, the vocal folds, spectra and formants.
 
+## The scenes
+
+This fork stages the 3D heads as two short film scenes, an homage to *Pulp Fiction* in the
+vector-display look: **Royale with cheese** (`?scene=royale`, two heads in a car) and
+**Ezekiel 25:17** (`?scene=ezekiel`, two men with pistols standing over a third in a chair; the
+verse is the King James Bible's). Live at <https://rnaud.github.io/chimera/>.
+
+Every line is spoken by the engine: `bun run scenes` renders the dialogue with
+`chimera render text … --f0 … --tele …` and writes `public/shows/<id>/` (the mix, a telemetry
+track per head, and `scene.json` with the cues). The page is `src/ui/components/ScenePage.tsx`;
+the sets, bodies and hair are `src/ui/render/stage3d.ts`. `bun run build:pages` builds the site
+for GitHub Pages. Forked from [jamesondh/chimera-vocal-synth](https://github.com/jamesondh/chimera-vocal-synth).
+
 ## Run it
 
 Needs Rust with the `wasm32-unknown-unknown` target, and Bun.
