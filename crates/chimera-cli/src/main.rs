@@ -17,7 +17,7 @@ const USAGE: &str = "\
 usage: chimera <command> [args] [--float]
 
   render speech  <out> [\"ipa / ipa\"] [male|female|child]
-  render text    <out> [\"English text.\"] [male|female|child] [--f0 hz] [--tele voice.tele]
+  render text    <out> [\"English text.\"] [male|female|child] [--f0 hz] [--rate x] [--accent x]\n                 [--pressure cmH2O] [--tension x] [--breath x] [--rough x] [--tele voice.tele]
   render song    [outdir] [male|female|child]
   render notes   <in.json> <out> [male|female|child] [--artic tracks.json] [--tele voice.tele]
                  (melody file; midi <= 0 is a rest; --artic also writes the articulators at 100 Hz)

@@ -143,11 +143,25 @@ pub fn text_f0(body_name: &str) -> f64 {
 /// Say `text` the way `render text` does: CMUdict G2P, the phrase planner from t0 = 50 ms, the
 /// body's speaking f0, 300 ms of tail. `chimera compare tsp` measures exactly these renders.
 pub fn say(g: &EnglishG2P, text: &str, body_name: &str) -> Result<Spoken, String> {
-    say_at(g, text, body_name, text_f0(body_name), false).map(|(s, _)| s)
+    say_at(g, text, body_name, &Delivery { f0: text_f0(body_name), ..Default::default() }, false).map(|(s, _)| s)
 }
 
-/// `say` at a chosen speaking f0 (Hz), optionally recording the telemetry (`--tele`).
-fn say_at(g: &EnglishG2P, text: &str, body_name: &str, f0: f64, tele: bool) -> Result<(Spoken, Option<TeleRecorder>), String> {
+/// How a line is delivered (`render text`'s flags); the defaults are `say`'s.
+#[derive(Default)]
+struct Delivery {
+    /// speaking pitch (Hz)
+    f0: f64,
+    /// speaking-rate multiplier (>1 faster)
+    rate: Option<f64>,
+    /// pitch excursion on stressed syllables (fraction; the planner's default is 0.14)
+    accent: Option<f64>,
+    /// the voice source: lung pressure (cmH2O), fold tension, breathiness and roughness (0..1)
+    source: SourcePatch,
+}
+
+/// `say` with a chosen delivery, optionally recording the telemetry (`--tele`).
+fn say_at(g: &EnglishG2P, text: &str, body_name: &str, d: &Delivery, tele: bool) -> Result<(Spoken, Option<TeleRecorder>), String> {
+    let f0 = d.f0;
     let b = body(body_name)?;
     let phrases = g.to_phrases(text);
     let shown: Vec<String> = phrases
@@ -166,7 +180,9 @@ fn say_at(g: &EnglishG2P, text: &str, body_name: &str, f0: f64, tele: bool) -> R
         })
         .collect();
     let mut voice = HumanVoice::new(FS, b, 2);
-    voice.set_source(&SourcePatch::f0(f0));
+    let mut source = d.source.clone();
+    source.f0 = Some(f0);
+    voice.set_source(&source);
     let inputs: Vec<PhraseInput> = phrases
         .iter()
         .map(|p| PhraseInput {
@@ -181,6 +197,8 @@ fn say_at(g: &EnglishG2P, text: &str, body_name: &str, f0: f64, tele: bool) -> R
             body: body_name.into(),
             t0: 0.05,
             f0: Some(f0),
+            rate: d.rate,
+            accent: d.accent,
             ..Default::default()
         },
     );
@@ -197,12 +215,19 @@ fn say_at(g: &EnglishG2P, text: &str, body_name: &str, f0: f64, tele: bool) -> R
 }
 
 /// English text through G2P and the phrase planner.
-/// `render text <out> ["Text."] [body] [--f0 hz] [--tele voice.tele]`: `--f0` is the speaking
-/// pitch (the body's own by default), `--tele` writes the telemetry over time (see `TeleRecorder`).
+/// `render text <out> ["Text."] [body] [--f0 hz] [--rate x] [--accent x] [--pressure cmH2O]
+/// [--tension x] [--breath x] [--rough x] [--tele voice.tele]`: `--f0` is the speaking pitch (the
+/// body's own by default), `--rate` the speed (>1 faster), `--accent` how far stressed syllables
+/// rise; the rest set the voice source. `--tele` writes the telemetry over time (`TeleRecorder`).
 pub fn text(ctx: &Ctx, a: &[String]) -> Result<(), String> {
     let mut tele_out: Option<String> = None;
     let mut f0: Option<f64> = None;
+    let mut d = Delivery::default();
     let mut pos: Vec<String> = Vec::new();
+    let num_in = |flag: &str, v: Option<&String>, lo: f64, hi: f64| -> Result<f64, String> {
+        let v = v.ok_or(format!("{flag} needs a number"))?;
+        v.parse::<f64>().ok().filter(|x| (lo..=hi).contains(x)).ok_or(format!("{flag} {v:?}: want {lo} to {hi}"))
+    };
     let mut it = a.iter();
     while let Some(x) = it.next() {
         if x == "--tele" {
@@ -210,6 +235,18 @@ pub fn text(ctx: &Ctx, a: &[String]) -> Result<(), String> {
         } else if x == "--f0" {
             let v = it.next().ok_or("--f0 needs a pitch in Hz")?;
             f0 = Some(v.parse::<f64>().ok().filter(|h| (40.0..=600.0).contains(h)).ok_or(format!("--f0 {v:?}: want 40 to 600 Hz"))?);
+        } else if x == "--rate" {
+            d.rate = Some(num_in(x, it.next(), 0.4, 2.5)?);
+        } else if x == "--accent" {
+            d.accent = Some(num_in(x, it.next(), 0.0, 0.6)?);
+        } else if x == "--pressure" {
+            d.source.pressure = Some(num_in(x, it.next(), 2.0, 30.0)?);
+        } else if x == "--tension" {
+            d.source.tension = Some(num_in(x, it.next(), 0.0, 1.0)?);
+        } else if x == "--breath" {
+            d.source.breathiness = Some(num_in(x, it.next(), 0.0, 1.0)?);
+        } else if x == "--rough" {
+            d.source.roughness = Some(num_in(x, it.next(), 0.0, 1.0)?);
         } else {
             pos.push(x.clone());
         }
@@ -220,7 +257,8 @@ pub fn text(ctx: &Ctx, a: &[String]) -> Result<(), String> {
     let body_name = arg(a, 2, "male");
     let g = g2p()?;
     let t = Instant::now();
-    let (s, rec) = say_at(&g, text, body_name, f0.unwrap_or(text_f0(body_name)), tele_out.is_some())?;
+    d.f0 = f0.unwrap_or(text_f0(body_name));
+    let (s, rec) = say_at(&g, text, body_name, &d, tele_out.is_some())?;
     let ms = ms_since(t);
     println!("{}", s.shown);
     let file = wav_name(name);

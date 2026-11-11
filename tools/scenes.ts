@@ -20,15 +20,43 @@ const CLI = join(ROOT, "target/release/chimera");
 const LEAD = 0.05, TAIL = 0.3;
 const HEADER = 48;
 
-interface Voice { name: string; f0: number; pan: number }
+/** how a line is said (`chimera render text`'s flags); a line's own values override its voice's */
+interface Delivery {
+  /** speaking pitch (Hz) */
+  f0?: number;
+  /** speed (>1 faster) */
+  rate?: number;
+  /** how far stressed syllables rise (the planner's default is 0.14) */
+  accent?: number;
+  /** lung pressure (cmH2O; 8 is speech, 16 a shout) */
+  pressure?: number;
+  /** vocal fold tension, breathiness, roughness (0..1) */
+  tension?: number;
+  breath?: number;
+  rough?: number;
+}
+interface Voice extends Delivery {
+  name: string;
+  f0: number;
+  pan: number;
+  /** level in the mix (dB): a soft voice brought up beside a louder one */
+  gain?: number;
+}
+interface Line extends Delivery {
+  who: number;
+  text: string;
+  /** the pause before it (s) */
+  pause: number;
+  /** the camera set-up it is filmed in (ScenePage.tsx); the same as the line before: no cut */
+  shot: string;
+}
 interface SceneDef {
   id: string;
   title: string;
   set: "car" | "apartment";
   /** in the order of the set's places */
   voices: Voice[];
-  /** who, the line, and the pause before it (s) */
-  lines: [number, string, number][];
+  lines: Line[];
   /** each gunman's pistol is levelled by the start of this line */
   aim?: { voice: number; line: number; late: number }[];
   /** after the last line: a pause, then who fires and how long after the shot before */
@@ -36,22 +64,29 @@ interface SceneDef {
   outro: number;
 }
 
+/**
+ * The deliveries follow the film's, as far as the engine's controls go. In the car the passenger
+ * drawls, low and soft, and the driver is quicker and higher, his questions climbing. In the
+ * apartment the first lines are quiet and level, then the verse builds phrase by phrase (pitch,
+ * lung pressure, fold tension and roughness all rising, the pace slowing) to a shout, and the
+ * shots come on the last word.
+ */
 const SCENES: SceneDef[] = [
   {
     id: "royale",
     title: "Royale with cheese",
     set: "car",
     voices: [
-      { name: "Vincent", f0: 122, pan: -0.45 },
-      { name: "Jules", f0: 96, pan: 0.45 },
+      { name: "Vincent", f0: 108, pan: -0.45, rate: 0.96, breath: 0.3, tension: 0.42, accent: 0.12, gain: 5 },
+      { name: "Jules", f0: 128, pan: 0.45, rate: 1.08, tension: 0.55, accent: 0.2 },
     ],
     lines: [
-      [0, "You know what they call a quarter pounder with cheese in Paris?", 3.2],
-      [1, "They don't call it a quarter pounder with cheese?", 0.45],
-      [0, "No man. They got the metric system.", 0.4],
-      [1, "Then what do they call it?", 0.5],
-      [0, "They call it a Royale with cheese.", 0.55],
-      [1, "Royale with cheese.", 0.9],
+      { who: 0, text: "You know what they call a quarter pounder with cheese in Paris?", pause: 3.2, shot: "two" },
+      { who: 1, text: "They don't call it a quarter pounder with cheese?", pause: 0.22, shot: "driver", f0: 152, accent: 0.26, rate: 1.12 },
+      { who: 0, text: "No man. They got the metric system.", pause: 0.18, shot: "passenger", rate: 1.02 },
+      { who: 1, text: "Then what do they call it?", pause: 0.3, shot: "low", f0: 134 },
+      { who: 0, text: "They call it a Royale with cheese.", pause: 0.45, shot: "passenger", f0: 112, rate: 0.86, accent: 0.2 },
+      { who: 1, text: "Royale with cheese.", pause: 0.75, shot: "driver", f0: 118, rate: 0.8, accent: 0.24 },
     ],
     outro: 3.0,
   },
@@ -60,23 +95,26 @@ const SCENES: SceneDef[] = [
     title: "Ezekiel 25:17",
     set: "apartment",
     voices: [
-      { name: "Jules", f0: 94, pan: 0.3 },
-      { name: "Vincent", f0: 122, pan: 0.55 },
-      { name: "Brett", f0: 158, pan: -0.5 },
+      { name: "Jules", f0: 112, pan: 0.3, rate: 0.94 },
+      { name: "Vincent", f0: 108, pan: 0.55 },
+      { name: "Brett", f0: 168, pan: -0.5, breath: 0.45, pressure: 6, tension: 0.4 },
     ],
     // the verse is Ezekiel 25:17 as the King James Bible has it
     lines: [
-      [0, "Do you know the Bible, Brett?", 3.0],
-      [2, "Yes.", 0.5],
-      [0, "There is one verse I know by heart. Ezekiel twenty five, seventeen.", 0.7],
-      [0, "And I will execute great vengeance upon them, with furious rebukes.", 0.9],
-      [0, "And they shall know that I am the Lord, when I shall lay my vengeance upon them.", 0.6],
+      { who: 0, text: "Do you know the Bible, Brett?", pause: 3.0, shot: "looming" },
+      { who: 2, text: "Yes.", pause: 0.7, shot: "chair" },
+      { who: 0, text: "There is one verse I know by heart.", pause: 0.9, shot: "room", f0: 108, rate: 0.9 },
+      { who: 0, text: "Ezekiel twenty five, seventeen.", pause: 0.55, shot: "room", f0: 116, rate: 0.84, accent: 0.2 },
+      { who: 0, text: "And I will execute great vengeance upon them,", pause: 1.2, shot: "looming", f0: 138, rate: 0.88, accent: 0.2, pressure: 10, tension: 0.6 },
+      { who: 0, text: "with furious rebukes.", pause: 0.3, shot: "looming", f0: 162, rate: 0.8, accent: 0.26, pressure: 12, tension: 0.66, rough: 0.16 },
+      { who: 0, text: "And they shall know that I am the Lord,", pause: 0.55, shot: "barrels", f0: 192, rate: 0.84, accent: 0.26, pressure: 14, tension: 0.72, rough: 0.2 },
+      { who: 0, text: "when I shall lay my vengeance upon them!", pause: 0.65, shot: "barrels", f0: 226, rate: 0.78, accent: 0.3, pressure: 16, tension: 0.78, rough: 0.28 },
     ],
     aim: [
-      { voice: 0, line: 4, late: 0.2 },
-      { voice: 1, line: 4, late: 1.1 },
+      { voice: 0, line: 6, late: 0.1 },
+      { voice: 1, line: 6, late: 0.7 },
     ],
-    shots: { after: 0.75, by: [[0, 0], [1, 0.16], [0, 0.2], [0, 0.24], [1, 0.14], [0, 0.22], [1, 0.3], [0, 0.42]] },
+    shots: { after: 0.12, by: [[0, 0], [1, 0.1], [0, 0.14], [1, 0.12], [0, 0.15], [0, 0.13], [1, 0.16], [0, 0.2], [1, 0.3]] },
     outro: 3.2,
   },
 ];
@@ -110,25 +148,31 @@ function gunshot(sr: number, seed: number): Float32Array {
 function build(def: SceneDef): void {
   const OUT = join(ROOT, "public/shows", def.id);
   const tmp = mkdtempSync(join(tmpdir(), `${def.id}-`));
-  const say = (stem: string, text: string, who: number) => {
-    const r = Bun.spawnSync([CLI, "render", "text", stem, text, "male", "--f0", String(def.voices[who].f0), "--tele", `${stem}.tele`], { cwd: ROOT });
+  const FLAGS: (keyof Delivery)[] = ["f0", "rate", "accent", "pressure", "tension", "breath", "rough"];
+  const say = (stem: string, text: string, who: number, line: Delivery = {}) => {
+    const d: Delivery = { ...def.voices[who], ...line };
+    const flags = FLAGS.flatMap((k) => (d[k] === undefined ? [] : [`--${k}`, String(d[k])]));
+    const r = Bun.spawnSync([CLI, "render", "text", stem, text, "male", ...flags, "--tele", `${stem}.tele`], { cwd: ROOT });
     if (r.exitCode !== 0) throw new Error(`chimera render text failed: ${r.stderr.toString()}`);
     return { wav: readWav(`${stem}.wav`), tele: readFileSync(`${stem}.tele`) };
   };
-  interface Take { who: number; text: string; wav: Float32Array; tele: Buffer; start: number }
+  interface Take { who: number; text: string; shot: string; wav: Float32Array; tele: Buffer; start: number }
   const takes: Take[] = [];
   let sr = 0, hop = 0, frameLen = 0;
   let at = 0;
-  for (const [i, [who, text, pause]] of def.lines.entries()) {
-    const { wav, tele } = say(join(tmp, `line${i}`), text, who);
+  for (const [i, line] of def.lines.entries()) {
+    const { who, text, pause, shot, ...delivery } = line;
+    const { wav, tele } = say(join(tmp, `line${i}`), text, who, delivery);
     sr = wav.sampleRate;
     hop = tele.readUInt32LE(12);
     frameLen = tele.readUInt32LE(20);
     // a line starts on a telemetry frame, so the stitched tracks stay frame-aligned
     const start = Math.round(((at + pause) * sr) / hop) * hop;
-    takes.push({ who, text, wav: wav.channels[0], tele, start });
+    takes.push({ who, text, shot, wav: wav.channels[0], tele, start });
     at = start / sr + wav.channels[0].length / sr - TAIL;
-    console.log(`${def.voices[who].name}: ${text}  (${(start / sr).toFixed(2)} s)`);
+    let sq = 0;
+    for (const v of wav.channels[0]) sq += v * v;
+    console.log(`${(start / sr).toFixed(2).padStart(6)} s  ${(wav.channels[0].length / sr - TAIL - LEAD).toFixed(2)} s long  ${(10 * Math.log10(sq / wav.channels[0].length)).toFixed(0)} dB  ${def.voices[who].name}: ${text}`);
   }
   const shots: { voice: number; t: number }[] = [];
   if (def.shots) {
@@ -153,11 +197,12 @@ function build(def: SceneDef): void {
   };
   let voicePeak = 0;
   for (const t of takes) {
-    add(t.wav, t.start, def.voices[t.who].pan, 1);
-    for (const v of t.wav) voicePeak = Math.max(voicePeak, Math.abs(v));
+    const g = 10 ** ((def.voices[t.who].gain ?? 0) / 20);
+    add(t.wav, t.start, def.voices[t.who].pan, g);
+    for (const v of t.wav) voicePeak = Math.max(voicePeak, g * Math.abs(v));
   }
-  // the shots well over the voices
-  shots.forEach((s, i) => add(gunshot(sr, 7 + 13 * i), Math.round(s.t * sr), def.voices[s.voice].pan, 1.1 * voicePeak));
+  // the shots over even the loudest line
+  shots.forEach((s, i) => add(gunshot(sr, 7 + 13 * i), Math.round(s.t * sr), def.voices[s.voice].pan, 0.75 * voicePeak));
   let peak = 0;
   for (let i = 0; i < total; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]));
   const gain = peak > 0 ? 0.92 / peak : 1;
@@ -191,7 +236,7 @@ function build(def: SceneDef): void {
     set: def.set,
     audio: "mix.wav",
     voices: def.voices.map((v) => ({ name: v.name, tele: `${v.name.toLowerCase()}.tele` })),
-    cues: takes.map((t) => ({ voice: t.who, text: t.text, start: +(t.start / sr + LEAD).toFixed(3), end: +(t.start / sr + t.wav.length / sr - TAIL).toFixed(3) })),
+    cues: takes.map((t) => ({ voice: t.who, text: t.text, shot: t.shot, start: +(t.start / sr + LEAD).toFixed(3), end: +(t.start / sr + t.wav.length / sr - TAIL).toFixed(3) })),
     aim: def.aim?.map((a) => ({ voice: a.voice, t: +(takes[a.line].start / sr + a.late).toFixed(3) })),
     shots: shots.length ? shots : undefined,
   };

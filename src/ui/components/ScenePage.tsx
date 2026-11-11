@@ -9,7 +9,7 @@
  *
  *   { "title": "…", "set": "car", "audio": "mix.wav",
  *     "voices": [{ "name": "Vincent", "tele": "vincent.tele" }, …],
- *     "cues": [{ "voice": 0, "text": "…", "start": 3.25, "end": 6.54 }, …],
+ *     "cues": [{ "voice": 0, "text": "…", "shot": "two", "start": 3.25, "end": 6.54 }, …],
  *     "aim": [{ "voice": 0, "t": 14.2 }], "shots": [{ "voice": 0, "t": 19.1 }, …] }
  *
  * The voices take the set's places in order (stage3d.ts `PLACES`). `aim` is when a gunman has
@@ -34,6 +34,8 @@ import { V } from "../colors.ts";
 interface Cue {
   voice: number;
   text: string;
+  /** the camera set-up this line is filmed in (the set's default for the line if absent) */
+  shot?: string;
   start: number;
   end: number;
 }
@@ -253,11 +255,14 @@ function shotAt(dir: Direction, cues: Cue[], t: number): { shot: Shot; since: nu
   const first = cues[0].start - 0.7, last = cues[cues.length - 1].end + dir.outroAfter;
   if (t < first) return { shot: dir.shots[dir.intro], since: 0 };
   if (t >= last) return { shot: dir.shots[dir.outro], since: last };
-  // a cut falls in the middle of the pause between two lines
+  // a cut falls in the middle of the pause between two lines, where the set-up changes
+  const name = (k: number) => (cues[k].shot && dir.shots[cues[k].shot!] ? cues[k].shot! : dir.lines[k % dir.lines.length]);
   let i = 0;
   while (i + 1 < cues.length && t >= (cues[i].end + cues[i + 1].start) / 2) i++;
-  const since = i === 0 ? first : (cues[i - 1].end + cues[i].start) / 2;
-  return { shot: dir.shots[dir.lines[i % dir.lines.length]], since };
+  let k = i;
+  while (k > 0 && name(k - 1) === name(i)) k--;
+  const since = k === 0 ? first : (cues[k - 1].end + cues[k].start) / 2;
+  return { shot: dir.shots[name(i)], since };
 }
 
 function SceneView(props: { scene: SceneFile; tracks: TeleTrack[]; transport: Transport }) {
