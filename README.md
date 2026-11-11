@@ -47,7 +47,10 @@ Every line is spoken by the engine: `bun run scenes` renders the dialogue with
 `chimera render text … --f0 … --tele …` and writes `public/shows/<id>/` (the mix, a telemetry
 track per head, and `scene.json` with the cues). The page is `src/ui/components/ScenePage.tsx`;
 the sets, bodies and hair are `src/ui/render/stage3d.ts`. `bun run build:pages` builds the site
-for GitHub Pages. Forked from [jamesondh/chimera-vocal-synth](https://github.com/jamesondh/chimera-vocal-synth).
+for GitHub Pages. An optional `public/shows/<id>/script.json` supplies local `lines` and
+`aim` arrays, replacing the bundled dialogue and aim cues together. Uploaded scripts stay
+in this gitignored directory; without the file, the bundled adaptation is rendered.
+Forked from [jamesondh/chimera-vocal-synth](https://github.com/jamesondh/chimera-vocal-synth).
 
 ## Run it
 

@@ -9,7 +9,7 @@
  *
  * Output: public/shows/<id>/ (gitignored, like every show).
  */
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readWav, writeWav } from "./lib/wav.ts";
@@ -104,22 +104,16 @@ const SCENES: SceneDef[] = [
     // The questions and the dare are condensed and mostly reworded; the verse is Ezekiel 25:17 as
     // the King James Bible has it.
     lines: [
-      // the questions: he gets louder and higher, the answers more frightened
-      { who: 0, text: "Describe Marsellus Wallace for me.", pause: 3.0, shot: "looming", f0: 118 },
-      { who: 2, text: "What?", pause: 0.45, shot: "chair", f0: 172 },
-      { who: 0, text: "Which country are you from?", pause: 0.3, shot: "looming", f0: 132, rate: 1.0, pressure: 9.5, tension: 0.58, accent: 0.2 },
-      { who: 2, text: "What?", pause: 0.3, shot: "chair", f0: 186, rate: 1.1 },
-      { who: 0, text: "I never heard of a country called What. Do they speak English there?", pause: 0.22, shot: "looming", f0: 150, rate: 1.04, pressure: 11, tension: 0.64, accent: 0.24, rough: 0.14 },
-      { who: 2, text: "What?", pause: 0.22, shot: "chair", f0: 202, rate: 1.15, pressure: 7 },
-      { who: 0, text: "English! Do you speak it?", pause: 0.15, shot: "looming", f0: 205, rate: 0.95, pressure: 15, tension: 0.76, accent: 0.28, rough: 0.26 },
-      { who: 2, text: "Yes.", pause: 0.3, shot: "chair", f0: 196, rate: 1.1 },
-      // the dare: lower again, slow, every word leaned on
-      { who: 0, text: "Then say what again.", pause: 0.5, shot: "looming", f0: 150, rate: 0.82, pressure: 12, tension: 0.7, accent: 0.3, rough: 0.2 },
-      { who: 0, text: "I dare you.", pause: 0.35, shot: "looming", f0: 138, rate: 0.72, pressure: 11, tension: 0.7, accent: 0.3, rough: 0.2 },
-      { who: 0, text: "I double dare you.", pause: 0.25, shot: "looming", f0: 158, rate: 0.76, pressure: 13, tension: 0.74, accent: 0.32, rough: 0.24 },
+      // Begin at the requested clip boundary, already mid-interrogation.
+      { who: 0, text: "Describe Marsellus Wallace for me.", pause: 0.4, shot: "looming", f0: 156, rate: 1.08, pressure: 12, tension: 0.68, accent: 0.26, rough: 0.18 },
+      { who: 2, text: "What?", pause: 0.18, shot: "chair", f0: 194, rate: 1.12, pressure: 6, breath: 0.55 },
+      // The threat tightens; reserve the slowest delivery for the reset before the verse.
+      { who: 0, text: "Then say what again.", pause: 0.12, shot: "looming", f0: 166, rate: 1.04, pressure: 12, tension: 0.7, accent: 0.3, rough: 0.2 },
+      { who: 0, text: "I dare you.", pause: 0.16, shot: "looming", f0: 148, rate: 0.92, pressure: 11, tension: 0.7, accent: 0.3, rough: 0.2 },
+      { who: 0, text: "I double dare you.", pause: 0.12, shot: "looming", f0: 170, rate: 0.98, pressure: 13, tension: 0.74, accent: 0.32, rough: 0.24 },
       { who: 2, text: "What?", pause: 0.9, shot: "chair", f0: 180, rate: 0.9, pressure: 5, breath: 0.6, bang: { voice: 0, after: 0.2 } },
       // the verse
-      { who: 0, text: "Do you know the Bible, Brett?", pause: 1.6, shot: "looming" },
+      { who: 0, text: "Do you know the Bible, Brett?", pause: 2.0, shot: "looming", f0: 108, rate: 0.88, pressure: 7.5, tension: 0.48, accent: 0.12 },
       { who: 2, text: "Yes!", pause: 0.5, shot: "chair", f0: 214, pressure: 9, tension: 0.6, rate: 1.1 },
       { who: 0, text: "There is one verse I know by heart.", pause: 0.9, shot: "room", f0: 108, rate: 0.9 },
       { who: 0, text: "Ezekiel twenty five, seventeen.", pause: 0.55, shot: "room", f0: 116, rate: 0.84, accent: 0.2 },
@@ -129,9 +123,9 @@ const SCENES: SceneDef[] = [
       { who: 0, text: "when I shall lay my vengeance upon them!", pause: 0.65, shot: "barrels", f0: 226, rate: 0.78, accent: 0.3, pressure: 16, tension: 0.78, rough: 0.28 },
     ],
     aim: [
-      // his pistol comes up as he shouts, and stays up; the other's on the verse's third phrase
-      { voice: 0, line: 6, late: 0.3 },
-      { voice: 1, line: 18, late: 0.7 },
+      // Already armed at the clip boundary; Vincent joins on the verse's third phrase.
+      { voice: 0, line: 0, late: 0 },
+      { voice: 1, line: 12, late: 0.7 },
     ],
     shots: { after: 0.12, by: [[0, 0], [1, 0.1], [0, 0.14], [1, 0.12], [0, 0.15], [0, 0.13], [1, 0.16], [0, 0.2], [1, 0.3]] },
     outro: 3.2,
@@ -270,4 +264,23 @@ function build(def: SceneDef): void {
 }
 
 const only = process.argv[2];
-for (const def of SCENES) if (!only || def.id === only) build(def);
+for (const def of SCENES) {
+  if (only && def.id !== only) continue;
+  // Uploaded dialogue stays in the ignored show directory, outside the source repository.
+  const script = join(ROOT, "public/shows", def.id, "script.json");
+  if (existsSync(script)) {
+    const override = JSON.parse(readFileSync(script, "utf8")) as Pick<SceneDef, "lines" | "aim">;
+    if (!Array.isArray(override.lines) || !override.lines.length) throw new Error(`${script}: missing lines`);
+    for (const line of override.lines) {
+      if (!Number.isInteger(line.who) || !def.voices[line.who] || typeof line.text !== "string" ||
+          !line.text.trim() || !Number.isFinite(line.pause) || line.pause < 0 || typeof line.shot !== "string") {
+        throw new Error(`${script}: invalid dialogue line`);
+      }
+    }
+    for (const aim of override.aim ?? []) {
+      if (!Number.isInteger(aim.line) || !override.lines[aim.line] || !def.voices[aim.voice] ||
+          !Number.isFinite(aim.late) || aim.late < 0) throw new Error(`${script}: invalid aim cue`);
+    }
+    build({ ...def, lines: override.lines, aim: override.aim });
+  } else build(def);
+}
